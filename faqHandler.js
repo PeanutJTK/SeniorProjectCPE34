@@ -22,9 +22,9 @@ class FAQHandler {
         `Q: ${selectedFAQ.question}\nA: ${selectedFAQ.answer}`
       );
     } else {
-      await context.sendActivity("ไม่พบคำตอบที่เกี่ยวข้อง."); // หากไม่มีคำตอบที่เกี่ยวข้อง
+      await context.sendActivity("ไม่พบคำตอบที่เกี่ยวข้องในFAQ กรุณารอสักครู่เพื่อทำการค้นหาเพิ่มเติม."); // หากไม่มีคำตอบที่เกี่ยวข้อง
     }
   }
 }
 
-module.exports = { FAQHandler }; // ส่งออกคลาส
+module.exports = { FAQHandler };

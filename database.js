@@ -57,4 +57,4 @@ module.exports = {
   getFAQs,
   searchFAQs,
   saveUnansweredQuestion,
-}; // ส่งออกฟังก์ชัน
+};

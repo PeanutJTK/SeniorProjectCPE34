@@ -5,6 +5,9 @@ const { MongoClient } = require("mongodb");
 const { FAQHandler } = require("./faqHandler.js");
 const { UnansweredQuestionHandler } = require("./unansweredQuestionHandler.js");
 const { connectToDatabase } = require("./database.js");
+const {
+  findURLWithKeywordInContent,
+} = require("./findURLWithKeywordInContent.js"); // เพิ่ม import function นี้
 
 const uri = process.env.MONGODB_URI; // URI ของ MongoDB
 const client = new MongoClient(uri);
@@ -36,19 +39,21 @@ class UniversityBot extends ActivityHandler {
     this.onMessage(async (context, next) => {
       const text = context.activity.text.trim().toLowerCase(); // ข้อความที่ได้รับ
 
-      // แสดง FAQs ทั้งหมดหากผู้ใช้ร้องขอ
       if (text === "show faqs") {
         await this.faqHandler.handleShowFAQs(context);
       } else {
-        // ค้นหาใน FAQs ตามข้อความที่ได้รับ
-        await this.faqHandler.handleMessage(context, text);
-
-        // หากไม่พบคำตอบใน FAQs
+        await this.faqHandler.handleMessage(context, text); // พยายามค้นหาคำตอบใน FAQ ก่อน
         if (!context.activity.isResponded) {
-          await this.unansweredHandler.handleMessage(context, text); // จัดเก็บคำถามที่ไม่มีคำตอบ
+          const urls = await findURLWithKeywordInContent(text); // ถ้าไม่พบใน FAQ, ค้นหา URL ที่เกี่ยวข้อง
+          if (urls && urls.length > 0) {
+            await context.sendActivity(
+              `คำตอบสำหรับคำถามของคุณอาจมีอยู่ที่: ${urls.join(", ")}`
+            );
+          } else {
+            await this.unansweredHandler.handleMessage(context, text); // ถ้าไม่พบทั้งใน FAQ และ URL, จัดเก็บคำถามที่ไม่มีคำตอบ
+          }
         }
       }
-
       await next(); // ดำเนินการต่อ
     });
   }
@@ -66,9 +71,11 @@ server.post("/api/messages", async (req, res) => {
       await bot.run(context);
     });
   } catch (error) {
-    console.error("Error handling message:", error); // จัดการข้อผิดพลาด
-    res.status(500).send({ error: "เกิดข้อผิดพลาดระหว่างการประมวลผลข้อความของคุณ." });
+    console.error("Error handling message:", error);
+    res
+      .status(500)
+      .send({ error: "เกิดข้อผิดพลาดระหว่างการประมวลผลข้อความของคุณ." });
   }
 });
 
-module.exports = { UniversityBot }; // ส่งออกคลาสแชทบอท
+module.exports = { UniversityBot };

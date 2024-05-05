@@ -28,4 +28,4 @@
 //   }
 // }
 
-// scrapeFromMongoDB(); // สแครปปิ้งจาก URL ที่เก็บไว้ใน MongoDB
+// scrapeFromMongoDB();
