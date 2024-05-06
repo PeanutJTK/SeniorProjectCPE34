@@ -1,39 +1,51 @@
-// const axios = require("axios");
-// const { MongoClient } = require("mongodb"); // เชื่อมต่อกับ MongoDB
-// const cheerio = require("cheerio");
+const axios = require("axios");
+const cheerio = require("cheerio");
+const { MongoClient } = require("mongodb");
 
-// async function findURLsWithKeywords(keywords) {
-//   const client = new MongoClient(process.env.MONGODB_URI); // URI ของ MongoDB
-//   const matchingURLs = [];
+async function findURLWithKeywordInContent(keyword) {
+  const uri = process.env.MONGODB_URI;
+  const client = new MongoClient(uri);
+  await client.connect();
+  const database = client.db("projectCPE");
+  const urlsCollection = database.collection("URLs");
 
-//   try {
-//     await client.connect(); // เชื่อมต่อกับ MongoDB
-//     const database = client.db("projectCPE");
-//     const urlsCollection = database.collection("URLs");
+  try {
+    const urls = await urlsCollection.find({}).toArray();
+    const matches = [];
 
-//     // ดึง URL จาก MongoDB
-//     const urls = await urlsCollection.find({}).toArray();
+    // ตัวอย่าง regular expression ที่ปรับปรุงเพื่อรองรับภาษาไทย
+    const spacedKeyword = keyword.replace(/\s+/g, '[\\s\\-\\_]*');
+    const regex = new RegExp(`(${spacedKeyword})`, "i");
 
-//     // ค้นหา URL ตามคำหลัก
-//     for (const { url } of urls) {
-//       const response = await axios.get(url); // ดึงข้อมูลเว็บ
-//       const $ = cheerio.load(response.data); // วิเคราะห์เนื้อหา HTML
-//       const textContent = $("body").text(); // เนื้อหาที่เป็นข้อความ
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url.url);
+        if (response.status >= 200 && response.status < 300) {
+          const $ = cheerio.load(response.data);
+          let textContent = $("body").text();
 
-//       for (const keyword of keywords) {
-//         if (textContent.includes(keyword)) { // ตรวจสอบคีย์เวิร์ด
-//           matchingURLs.push(url); // เก็บ URL ที่เกี่ยวข้อง
-//           break; // หลีกเลี่ยงการเพิ่ม URL ซ้ำ
-//         }
-//       }
-//     }
-//   } catch (error) {
-//     console.error("Error finding URLs with keywords:", error); // จัดการข้อผิดพลาด
-//   } finally {
-//     client.close(); // ปิดการเชื่อมต่อ
-//   }
+          // Consider other attributes that might contain relevant text
+          $("a, img, p, h1, h2, h3, h4, h5, h6").each((i, elem) => {
+            textContent += " " + $(elem).text();
+          });
 
-//   return matchingURLs; // ส่งคืน URL ที่มีคำหลัก
-// }
+          if (regex.test(textContent)) {
+            matches.push(url.url);
+          }
+        } else {
+          console.log(`Skipping ${url.url}: HTTP status code ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`Error accessing ${url.url}:`, error.message);
+      }
+    }
+    return matches;
+  } catch (error) {
+    console.error("Error searching in HTML content:", error);
+    return [];
+  } finally {
+    await client.close();
+  }
+}
 
-// module.exports = { findURLsWithKeywords }; // ส่งออกฟังก์ชัน
+module.exports = { findURLWithKeywordInContent };
