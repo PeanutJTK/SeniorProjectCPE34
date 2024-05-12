@@ -13,9 +13,10 @@ async function findURLWithKeywordInContent(keyword) {
     const urls = await urlsCollection.find({}).toArray();
     const matches = [];
 
-    // ตัวอย่าง regular expression ที่ปรับปรุงเพื่อรองรับภาษาไทย
-    const spacedKeyword = keyword.replace(/\s+/g, '[\\s\\-\\_]*');
-    const regex = new RegExp(`(${spacedKeyword})`, "i");
+    // ปรับปรุง regular expression ให้ยืดหยุ่นมากขึ้น
+    // รวมถึงคำนำหน้าและคำต่อท้ายที่เกี่ยวข้อง
+    const words = keyword.split(/\s+/);
+    const regex = new RegExp(words.map(word => `(${word})`).join('.*'), "i");
 
     for (const url of urls) {
       try {
@@ -24,7 +25,7 @@ async function findURLWithKeywordInContent(keyword) {
           const $ = cheerio.load(response.data);
           let textContent = $("body").text();
 
-          // Consider other attributes that might contain relevant text
+          // พิจารณาองค์ประกอบอื่นที่อาจมีข้อความที่เกี่ยวข้อง
           $("a, img, p, h1, h2, h3, h4, h5, h6").each((i, elem) => {
             textContent += " " + $(elem).text();
           });

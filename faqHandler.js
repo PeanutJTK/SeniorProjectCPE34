@@ -15,14 +15,18 @@ class FAQHandler {
   }
 
   async handleMessage(context, text) {
-    const faqResults = await searchFAQs(text); // ค้นหาใน FAQs ตามข้อความที่ได้รับ
+    const faqResults = await searchFAQs(text);
     if (faqResults && faqResults.length > 0) {
-      const selectedFAQ = faqResults[0]; // เลือกคำถามที่เกี่ยวข้อง
+      const selectedFAQ = faqResults[0];
       await context.sendActivity(
         `Q: ${selectedFAQ.question}\nA: ${selectedFAQ.answer}`
       );
+      return faqResults;
     } else {
-      await context.sendActivity("ไม่พบคำตอบที่เกี่ยวข้องในFAQ กรุณารอสักครู่เพื่อทำการค้นหาเพิ่มเติม."); // หากไม่มีคำตอบที่เกี่ยวข้อง
+      await context.sendActivity(
+        "ไม่พบคำตอบที่เกี่ยวข้องในFAQ กรุณารอสักครู่เพื่อทำการค้นหาเพิ่มเติม."
+      );
+      return null;
     }
   }
 }

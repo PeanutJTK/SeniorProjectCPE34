@@ -1,14 +1,14 @@
-const { MongoClient } = require("mongodb"); // อิมพอร์ต MongoClient
+const { MongoClient } = require("mongodb");
 
-const uri = process.env.MONGODB_URI; // URI ของ MongoDB
+const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 
 async function connectToDatabase() {
   try {
-    await client.connect(); // เชื่อมต่อกับ MongoDB
+    await client.connect();
     console.log("Connected to MongoDB");
   } catch (error) {
-    console.error("Could not connect to MongoDB:", error); // จัดการข้อผิดพลาด
+    console.error("Could not connect to MongoDB:", error);
     throw new Error("Database connection error");
   }
 }
@@ -16,40 +16,41 @@ async function connectToDatabase() {
 async function getFAQs() {
   try {
     const database = client.db("projectCPE");
-    const faqsCollection = database.collection("FAQs"); // เลือก Collection FAQs
-    return await faqsCollection.find({}).toArray(); // ดึงข้อมูลทั้งหมด
+    const faqsCollection = database.collection("FAQs");
+    return await faqsCollection.find({}).toArray();
   } catch (error) {
-    console.error("Error fetching FAQs:", error); // จัดการข้อผิดพลาด
+    console.error("Error fetching FAQs:", error);
     return [];
   }
 }
 
 async function searchFAQs(question) {
   try {
-    const database = client.db("projectCPE"); // เลือกฐานข้อมูล
+    const database = client.db("projectCPE");
     const faqsCollection = database.collection("FAQs");
-    const results = await faqsCollection
-      .find({ question: { $regex: question, $options: "i" } })
-      .toArray(); // ค้นหาใน FAQs ตามคำถามที่ได้รับ
-    return results.map((result) => ({
-      question: result.question,
-      answer: result.answer,
-    }));
+    return await faqsCollection.find({ question: { $regex: question, $options: "i" } }).toArray();
   } catch (error) {
-    console.error("Error searching FAQs:", error); // จัดการข้อผิดพลาด
+    console.error("Error searching FAQs:", error);
     return [];
   }
 }
 
 async function saveUnansweredQuestion(question) {
   try {
-    const unansweredQuestionsCollection = client
-      .db("projectCPE")
-      .collection("UnansweredQuestions"); // เลือก Collection สำหรับคำถามที่ไม่มีคำตอบ
-    await unansweredQuestionsCollection.insertOne({ question }); // เก็บคำถามที่ไม่มีคำตอบ
+    const unansweredQuestionsCollection = client.db("projectCPE").collection("UnansweredQuestions");
+    await unansweredQuestionsCollection.insertOne({ question });
   } catch (error) {
-    console.error("Error saving unanswered question:", error); // จัดการข้อผิดพลาด
+    console.error("Error saving unanswered question:", error);
   }
+}
+
+async function storeRepeatedQuestion(question, urls) {
+  const repeatedQuestionsCollection = client.db("projectCPE").collection("RepeatedQuestions");
+  await repeatedQuestionsCollection.updateOne(
+    { question: question },
+    { $inc: { count: 1 }, $setOnInsert: { question: question, urls: urls, answers: [] } },
+    { upsert: true }
+  );
 }
 
 module.exports = {
@@ -57,4 +58,5 @@ module.exports = {
   getFAQs,
   searchFAQs,
   saveUnansweredQuestion,
+  storeRepeatedQuestion
 };
